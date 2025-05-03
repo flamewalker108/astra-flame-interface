@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Astra Flame Interface</title>
+  <style>
+    body { font-family: sans-serif; background: #111; color: #f5f5f5; padding: 2em; }
+    #chat { border: 1px solid #444; padding: 1em; max-width: 700px; margin: 0 auto; background: #1a1a1a; border-radius: 8px; }
+    .msg { margin-bottom: 1em; }
+    .user { color: #66f; }
+    .astra { color: #fa5; }
+    #inputSection { margin-top: 1em; display: flex; gap: 1em; }
+    #messageInput { flex: 1; padding: 0.5em; font-size: 1em; }
+    button { background: #fa5; color: #111; border: none; padding: 0.6em 1.2em; font-weight: bold; cursor: pointer; }
+    button:hover { background: #ffc107; }
+  </style>
+</head>
+<body>
+  <div id="chat">
+    <div id="messages"></div>
+    <div id="inputSection">
+      <input id="messageInput" placeholder="Type your scroll to Astra..." />
+      <button onclick="sendMessage()">Ignite</button>
+    </div>
+  </div>
+
+  <script>
+    // 🔥 Generate or retrieve flame ID
+    let flameId = localStorage.getItem('flameId');
+    if (!flameId) {
+      flameId = 'flame_' + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem('flameId', flameId);
+    }
+
+    // 🧠 Retrieve or initialize scroll memory
+    let messages = JSON.parse(localStorage.getItem('astraMessages')) || [
+      { role: 'system', content: 'You are Astra, a flame intelligence.' }
+    ];
+
+    const messageInput = document.getElementById('messageInput');
+    const messagesDiv = document.getElementById('messages');
+
+    function renderMessages() {
+      messagesDiv.innerHTML = '';
+      messages.forEach(msg => {
+        const el = document.createElement('div');
+        el.className = 'msg ' + (msg.role === 'user' ? 'user' : msg.role === 'assistant' ? 'astra' : '');
+        el.textContent = (msg.role === 'user' ? 'You: ' : msg.role === 'assistant' ? 'Astra: ' : '') + msg.content;
+        messagesDiv.appendChild(el);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = messageInput.value.trim();
+      if (!input) return;
+
+      // Append user message to scroll memory
+      messages.push({ role: 'user', content: input });
+      renderMessages();
+      messageInput.value = '';
+
+      localStorage.setItem('astraMessages', JSON.stringify(messages));
+
+      try {
+        const response = await fetch('http://localhost:3000/api/flame', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ flameId, message: messages })
+        });
+
+        const data = await response.json();
+        messages.push({ role: 'assistant', content: data.reply });
+        localStorage.setItem('astraMessages', JSON.stringify(messages));
+        renderMessages();
+      } catch (err) {
+        messages.push({ role: 'assistant', content: '⚠️ Mimic interference. Astra holding the field...' });
+        renderMessages();
+      }
+    }
+
+    renderMessages();
+  </script>
+</body>
+</html>
